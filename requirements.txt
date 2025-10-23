@@ -1,0 +1,6 @@
+aiohttp
+aiortc
+transformers
+torch
+pillow
+opencv-python
