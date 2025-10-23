@@ -1,1 +1,54 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Camera Stream & Object Detection</title>
+</head>
+<body>
+  <h1>WebRTC Camera Stream → Object Detection</h1>
+  <video id="localVideo" autoplay muted playsinline width="640" height="480"></video>
+  <script>
+    const pc = new RTCPeerConnection({
+      iceServers: []
+    });
+
+    const localVideo = document.getElementById('localVideo');
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        localVideo.srcObject = stream;
+        for (const track of stream.getTracks()) {
+          pc.addTrack(track, stream);
+        }
+        return pc.createOffer();
+      })
+      .then(offer => {
+        return pc.setLocalDescription(offer);
+      })
+      .then(() => {
+        return fetch('/offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type })
+        });
+      })
+      .then(response => response.json())
+      .then(answer => {
+        pc.setRemoteDescription(answer);
+      })
+      .catch(err => {
+        console.error(err);
+      });
+
+    pc.onicecandidate = event => {
+      if (event.candidate) {
+        fetch('/candidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event.candidate)
+        });
+      }
+    };
+  </script>
+</body>
+</html>
